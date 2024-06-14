@@ -1,6 +1,8 @@
-import { useState, useContext } from "react";
-import { useNavigate } from "react-router-dom";
-// import Swal from "sweetalert2";
+import { useState, useContext, useEffect } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
+import CircularProgress from "@mui/material/CircularProgress";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import Swal from "sweetalert2";
 import Avatar from "@mui/material/Avatar";
 import Button from "@mui/material/Button";
 import CssBaseline from "@mui/material/CssBaseline";
@@ -14,14 +16,18 @@ import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import Typography from "@mui/material/Typography";
 import Container from "@mui/material/Container";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
-import { auth } from "./firebase.js";
-import axios from "axios";
-import { AuthContext } from "./context/AuthProvider";
-import firebase from "firebase/compat/app";
+import { auth } from "../firebase.js";
+import { AuthContext } from "../context/AuthProvider.js";
+
+import "firebase/auth";
 
 function Login() {
+  const navigate = useNavigate();
   const [inputs, setInputs] = useState({});
-  const { logIn } = useContext(AuthContext);
+  const [token, setToken] = useState("");
+  const [authState, setAuthState] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const { logIn, logOut } = useContext(AuthContext);
 
   const defaultTheme = createTheme();
 
@@ -29,50 +35,40 @@ function Login() {
     const name = event.target.name;
     const value = event.target.value;
     setInputs((values) => ({ ...values, [name]: value }));
-    // console.log(inputs);
   };
-  // auth.onAuthStateChanged((userCredential) => {
-  //   if (userCredential) {
-  //     userCredential.getIdToken().then((token) => {
-  //       console.log(token);
-  //       setToken(token);
-  //       setAuthState(true);
-  //     });
-  //   } else {
-  //     setAuthState(false);
-  //   }
-  // });
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    setIsLoaded(true);
     try {
-      const userLogin = await logIn(inputs.email, inputs.password);
-      await auth.currentUser.getIdToken().then((token) => {
-        console.log(token);
-        checkToken(token);
-      });
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        inputs.email,
+        inputs.password
+      )
+        .then((userCred) => {
+          console.log(userCred);
+          localStorage.setItem("uid", userCred.user.uid);
+          Swal.fire({
+            html: `<i>เข้าสู่ระบบเรียบร้อย</i>`,
+            icon: "success",
+          }).then(() => {
+            navigate("/user");
+          });
+        })
+        .catch((error) => {
+          console.log(error.code);
+          if (error.code === "auth/invalid-credential") {
+            Swal.fire({
+              html: `<i>ชื่อหรือรหัสผ่านไม่ถูกต้อง</i>`,
+              icon: "error",
+            });
+          }
+        });
     } catch (error) {
       console.log(error);
-    }
-  };
-  const checkToken = async (token) => {
-    try {
-      const response = await axios.post(
-        "http://localhost:8080/api/login",
-        {
-          email: inputs.email,
-          password: inputs.password,
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer " + token,
-          },
-        }
-      );
-      console.log(response.data);
-    } catch (error) {
-      console.error(error);
+    } finally {
+      setIsLoaded(false);
     }
   };
 
@@ -129,11 +125,13 @@ function Login() {
                 control={<Checkbox value="remember" color="primary" />}
                 label="Remember me"
               />
+
               <Button
                 type="submit"
                 fullWidth
                 variant="contained"
                 sx={{ mt: 3, mb: 2 }}
+                disabled={isLoaded}
               >
                 Sign In
               </Button>

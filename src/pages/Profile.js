@@ -1,55 +1,38 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
-import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
-import Toolbar from "@mui/material/Toolbar";
-import Typography from "@mui/material/Typography";
-import IconButton from "@mui/material/IconButton";
-import MenuIcon from "@mui/icons-material/Menu";
-import MenuItem from "@mui/material/MenuItem";
-import Menu from "@mui/material/Menu";
-import Avatar from "@mui/material/Avatar";
 import TextField from "@mui/material/TextField";
 import Grid from "@mui/material/Grid";
 import Container from "@mui/material/Container";
 import CssBaseline from "@mui/material/CssBaseline";
+import { auth } from "axios";
 import axios from "axios";
-import firebase from "./firebase.js";
+import { CircularProgress } from "@mui/material";
+import { AuthContext } from "../context/AuthProvider";
+import NavBar from "../components/NavBar";
 
 function Profile() {
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [user, setUser] = useState([]);
-  const token = localStorage.getItem("token");
   const navigate = useNavigate();
-
+  const { logOut } = useContext(AuthContext);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [user, setUser] = useState({
+    fname: "",
+    lname: "",
+    username: "",
+    email: "",
+    avatar: "",
+  });
+  const token = localStorage.getItem("token");
   const [anchorEl, setAnchorEl] = React.useState(null);
+  const uid = localStorage.getItem("uid");
 
-  const handleMenu = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
-
-  const logout = () => {
-    localStorage.removeItem("token");
-    navigate("/");
-  };
-  useEffect(async () => {
-    firebase.auth().onAuthChangeState((userCred) => {
-      setUser(userCred);
-    });
-  }, [token]);
-  const fetchData = async (token) => {
+  // Function to fetch data from the server
+  const fetchData = async (id) => {
     try {
-      const response = await axios.post("http://localhost:8080/api/login", {
-        headers: {
-          Authorization: "Bearer " + token,
-        },
-      });
+      const response = await axios.get("http://localhost:8080/api/read/" + id);
       console.log(response.data);
+      return response.data;
     } catch (error) {
       if (error.response && error.response.data) {
         console.log(error.response.data);
@@ -61,64 +44,26 @@ function Profile() {
     }
   };
 
+  useEffect(() => {
+    fetchData(uid).then((data) => {
+      setUser(data.message);
+    });
+  }, [uid]);
+
   if (isLoaded) {
-    return <div>Loading</div>;
+    return <CircularProgress />;
   } else {
     return (
       <div>
         <Box sx={{ flexGrow: 1 }}>
-          <AppBar position="static">
-            <Toolbar>
-              <IconButton
-                size="large"
-                edge="start"
-                color="inherit"
-                aria-label="menu"
-                sx={{ mr: 2 }}
-              >
-                <MenuIcon />
-              </IconButton>
-              <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-                Photos
-              </Typography>
-
-              <div>
-                <IconButton
-                  size="large"
-                  aria-label="account of current user"
-                  aria-controls="menu-appbar"
-                  aria-haspopup="true"
-                  onClick={handleMenu}
-                  color="inherit"
-                >
-                  <Avatar src={user.avatar} alt={user.id} />
-                </IconButton>
-                <Menu
-                  id="menu-appbar"
-                  anchorEl={anchorEl}
-                  anchorOrigin={{
-                    vertical: "top",
-                    horizontal: "right",
-                  }}
-                  keepMounted
-                  transformOrigin={{
-                    vertical: "top",
-                    horizontal: "right",
-                  }}
-                  open={Boolean(anchorEl)}
-                  onClose={handleClose}
-                >
-                  <MenuItem onClick={logout}>Log out</MenuItem>
-                </Menu>
-              </div>
-            </Toolbar>
-          </AppBar>
+          <NavBar data={user}></NavBar>
           <Container component="main" maxWidth="xs">
             <CssBaseline />
             <Box component="form" noValidate sx={{ mt: 3 }}>
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6}>
                   <TextField
+                    disabled
                     noValidate
                     name="fname"
                     required
@@ -131,6 +76,7 @@ function Profile() {
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <TextField
+                    disabled
                     noValidate
                     InputLabelProps={{ shrink: true }}
                     fullWidth
@@ -142,6 +88,7 @@ function Profile() {
                 </Grid>{" "}
                 <Grid item xs={12}>
                   <TextField
+                    disabled
                     noValidate
                     InputLabelProps={{ shrink: true }}
                     fullWidth
@@ -154,6 +101,7 @@ function Profile() {
                 </Grid>
                 <Grid item xs={12}>
                   <TextField
+                    disabled
                     noValidate
                     InputLabelProps={{ shrink: true }}
                     fullWidth
@@ -165,6 +113,7 @@ function Profile() {
                 </Grid>
                 <Grid item xs={12}>
                   <TextField
+                    disabled
                     noValidate
                     InputLabelProps={{ shrink: true }}
                     fullWidth

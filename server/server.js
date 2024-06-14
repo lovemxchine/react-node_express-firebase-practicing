@@ -60,10 +60,19 @@ app.post("/api/create", async (req, res) => {
 });
 
 // Create -> Register
+let isSubmitting = false;
 app.post("/api/register", async (req, res) => {
+  if (isSubmitting) {
+    return res.status(400).send({ message: "Already processing request" });
+  }
+  isSubmitting = true;
   try {
     const { email, password } = req.body;
-    const userRecord = await admin.auth().createUser({ email, password });
+    const userRecord = await admin.auth().createUser({
+      email: req.body.email,
+      password: req.body.password,
+      displayName: req.body.username,
+    });
     await db
       .collection("users")
       .doc("/" + userRecord.uid + "/")
@@ -79,6 +88,8 @@ app.post("/api/register", async (req, res) => {
   } catch (error) {
     console.log(error.message);
     return res.status(500).send({ status: "failed" });
+  } finally {
+    isSubmitting = false;
   }
 });
 
@@ -103,16 +114,10 @@ app.get("/api/read/:id", async (req, res) => {
 // Read -> get Login ** Not working
 app.post("/api/login", async (req, res) => {
   try {
-    const { email, password } = req.body;
-    const userData = await admin.auth().getUserByEmail(email);
-    const uid = userData.uid;
-    const token = await admin.auth().createCustomToken(uid);
-    console.log(userData);
-    console.log(uid);
-    console.log(token);
-    return res
-      .status(200)
-      .send({ status: "success", message: "Login Success", token: token + "" });
+    return res.status(200).send({
+      status: "success",
+      message: "Login Success",
+    });
   } catch (error) {
     if (error.code === "auth/user-not-found") {
       res
